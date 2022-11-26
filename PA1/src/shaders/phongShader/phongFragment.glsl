@@ -15,12 +15,12 @@ varying highp vec3 vFragPos;
 varying highp vec3 vNormal;
 
 // Shadow map related variables
-#define NUM_SAMPLES 20
+#define NUM_SAMPLES 30
 #define BLOCKER_SEARCH_NUM_SAMPLES NUM_SAMPLES
 #define PCF_NUM_SAMPLES NUM_SAMPLES
 #define NUM_RINGS 10
 
-#define EPS 1e-3
+#define EPS 1e-2
 #define PI 3.141592653589793
 #define PI2 6.283185307179586
 
@@ -87,8 +87,26 @@ float findBlocker( sampler2D shadowMap,  vec2 uv, float zReceiver ) {
 	return 1.0;
 }
 
-float PCF(sampler2D shadowMap, vec4 coords) {
-  return 1.0;
+float PCF(sampler2D shadowMap, vec4 coords, float filterSize) {
+  // precentage closer filtering
+  poissonDiskSamples(coords.xy);
+
+  float shadowDepth = 0.0;
+  float currentDepth = coords.z;
+
+  float shadowMapSize = 2048.0;
+  float visibility = 0.0;
+
+  for (int i = 0; i < NUM_SAMPLES; i++) {
+    vec2 uv =  coords.xy + poissonDisk[i] * filterSize / shadowMapSize;
+    vec4 rgba  = texture2D(shadowMap, uv).rgba;
+    shadowDepth = unpack(rgba);
+
+    visibility += shadowDepth + EPS > currentDepth ? 1.0 : 0.0;
+  }
+
+  visibility /= float(NUM_SAMPLES);
+  return visibility;
 }
 
 float PCSS(sampler2D shadowMap, vec4 coords){
@@ -137,11 +155,18 @@ vec3 blinnPhong() {
 }
 
 void main(void) {
+  // get coordinates from world space to NDC[0, 1] space 
   vec3 shadowCoord = vPositionFromLight.xyz / vPositionFromLight.w;
   shadowCoord = (shadowCoord + 1.0) / 2.0;
 
-  float visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
-  //visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0));
+  // method for hard shadow mapping
+  // float visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
+
+  // method for hard shadow mapping with PCF technique for Antialiasing
+  float penumbra = 10.0;
+  float visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0), penumbra);
+
+  // method for soft shadow mapping
   //visibility = PCSS(uShadowMap, vec4(shadowCoord, 1.0));
 
   vec3 phongColor = blinnPhong();
