@@ -20,9 +20,12 @@ varying highp vec3 vNormal;
 #define PCF_NUM_SAMPLES NUM_SAMPLES
 #define NUM_RINGS 10
 
-#define EPS 1e-2
+#define EPS 1e-3
 #define PI 3.141592653589793
 #define PI2 6.283185307179586
+
+#define shadowMapSize 2048.0
+#define lightWidth 50.0
 
 uniform sampler2D uShadowMap;
 
@@ -83,8 +86,29 @@ void uniformDiskSamples( const in vec2 randomSeed ) {
   }
 }
 
-float findBlocker( sampler2D shadowMap,  vec2 uv, float zReceiver ) {
-	return 1.0;
+float findBlocker(sampler2D shadowMap, vec2 uv, float zReceiver) {
+  // calculate average blocker depth
+  poissonDiskSamples(uv);
+
+  float avgBlockerDepth = 0.0;
+  float blockerDepth = 0.0;
+  float blockerCount = 0.0;
+
+  float filterSize = 10.0;
+
+  for (int i = 0; i < NUM_SAMPLES; i++) {
+    vec2 coords =  uv.xy + poissonDisk[i] * filterSize / shadowMapSize;
+    vec4 rgba  = texture2D(shadowMap, coords).rgba;
+    blockerDepth = unpack(rgba);
+
+    if (blockerDepth + 0.01 < zReceiver) {
+      avgBlockerDepth += blockerDepth;
+      blockerCount += 1.0;
+    }
+  }
+
+  if (blockerCount == 0.0) return 1.0;
+  return avgBlockerDepth / blockerCount;
 }
 
 float PCF(sampler2D shadowMap, vec4 coords, float filterSize) {
@@ -94,7 +118,6 @@ float PCF(sampler2D shadowMap, vec4 coords, float filterSize) {
   float shadowDepth = 0.0;
   float currentDepth = coords.z;
 
-  float shadowMapSize = 2048.0;
   float visibility = 0.0;
 
   for (int i = 0; i < NUM_SAMPLES; i++) {
@@ -109,16 +132,18 @@ float PCF(sampler2D shadowMap, vec4 coords, float filterSize) {
   return visibility;
 }
 
-float PCSS(sampler2D shadowMap, vec4 coords){
-
+float PCSS(sampler2D shadowMap, vec4 shadowCoord){
   // STEP 1: avgblocker depth
+  float receiverDepth = shadowCoord.z;
+  float blockerDepth = findBlocker(shadowMap, shadowCoord.xy, receiverDepth);
 
   // STEP 2: penumbra size
+  float penumbra = (receiverDepth - blockerDepth) * lightWidth / blockerDepth;
+  if (penumbra < 0.0) penumbra = 5.0;
 
   // STEP 3: filtering
-  
-  return 1.0;
-
+  float visibility = PCF(uShadowMap, shadowCoord, penumbra);
+  return visibility;
 }
 
 float useShadowMap(sampler2D shadowMap, vec4 shadowCoord){
@@ -163,11 +188,11 @@ void main(void) {
   // float visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
 
   // method for hard shadow mapping with PCF technique for Antialiasing
-  float penumbra = 10.0;
-  float visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0), penumbra);
+  // float penumbra = 10.0;
+  // float visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0), penumbra);
 
   // method for soft shadow mapping
-  //visibility = PCSS(uShadowMap, vec4(shadowCoord, 1.0));
+  float visibility = PCSS(uShadowMap, vec4(shadowCoord, 1.0));
 
   vec3 phongColor = blinnPhong();
 
