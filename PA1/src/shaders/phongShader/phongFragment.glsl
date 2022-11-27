@@ -188,7 +188,7 @@ void main(void) {
   // float visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
 
   // method for hard shadow mapping with PCF technique for Antialiasing
-  float penumbra = 10.0;
+  // float penumbra = 10.0;
   // float visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0), penumbra);
 
   // method for soft shadow mapping
