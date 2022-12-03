@@ -129,6 +129,16 @@ namespace ProjEnv
                     int index = (y * width + x) * channel;
                     Eigen::Array3f Le(images[i][index + 0], images[i][index + 1],
                                       images[i][index + 2]);
+
+                    float area = CalcArea(x, y, width, height);
+
+                    for (int l = 0; l <= SHOrder; l++) {
+                        for (int m = -l; m <= l; m++) {
+                            int idx = sh::GetIndex(l, m);
+                            double basis = sh::EvalSH(l, m, dir.cast<double>().normalized());
+                            SHCoeffiecents[idx] = Le * basis * area;
+                        }
+                    }
                 }
             }
         }
@@ -206,16 +216,22 @@ public:
             auto shFunc = [&](double phi, double theta) -> double {
                 Eigen::Array3d d = sh::ToVector(phi, theta);
                 const auto wi = Vector3f(d.x(), d.y(), d.z());
+
+                double H = wi.dot(n);
                 if (m_Type == Type::Unshadowed)
                 {
                     // TODO: here you need to calculate unshadowed transport term of a given direction
                     // TODO: 此处你需要计算给定方向下的unshadowed传输项球谐函数值
-                    return 0;
+
+                    return H > 0.0f ? H : 0;
                 }
                 else
                 {
                     // TODO: here you need to calculate shadowed transport term of a given direction
                     // TODO: 此处你需要计算给定方向下的shadowed传输项球谐函数值
+
+                    Ray3f ray(v, wi.normalized());
+                    if (H > 0.0f && !scene->rayIntersect(ray)) return H;
                     return 0;
                 }
             };
