@@ -136,7 +136,7 @@ namespace ProjEnv
                         for (int m = -l; m <= l; m++) {
                             int idx = sh::GetIndex(l, m);
                             double basis = sh::EvalSH(l, m, dir.cast<double>().normalized());
-                            SHCoeffiecents[idx] = Le * basis * area;
+                            SHCoeffiecents[idx] += Le * basis * area;
                         }
                     }
                 }

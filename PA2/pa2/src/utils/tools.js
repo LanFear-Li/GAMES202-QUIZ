@@ -1,6 +1,13 @@
 function getRotationPrecomputeL(precompute_L, rotationMatrix){
+	let result = [];
 
-
+	for (let i = 0; i < 3; i++) result[i] = [];
+	for (let i = 0; i < 3 * 3; i++) {
+		result[0].push(precompute_L[i][0]);
+		result[1].push(precompute_L[i][1]);
+		result[2].push(precompute_L[i][2]);
+	}
+	
 	return result;
 }
 
