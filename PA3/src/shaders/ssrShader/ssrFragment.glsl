@@ -122,8 +122,12 @@ vec3 GetGBufferDiffuse(vec2 uv) {
  *
  */
 vec3 EvalDiffuse(vec3 wi, vec3 wo, vec2 uv) {
-  vec3 L = vec3(0.0);
-  return L;
+  vec3 diffuseRate = GetGBufferDiffuse(uv);
+  vec3 normal = normalize(GetGBufferNormalWorld(uv));
+  float cosine = max(0.0, dot(normal, wi));
+
+  // diffuse BRDF and cosine term
+  return diffuseRate * INV_PI * cosine;
 }
 
 /*
@@ -132,8 +136,10 @@ vec3 EvalDiffuse(vec3 wi, vec3 wo, vec2 uv) {
  *
  */
 vec3 EvalDirectionalLight(vec2 uv) {
-  vec3 Le = vec3(0.0);
-  return Le;
+  float visibility = GetGBufferuShadow(uv);
+
+  // light radiance term
+  return uLightRadiance * visibility;
 }
 
 bool RayMarch(vec3 ori, vec3 dir, out vec3 hitPos) {
@@ -145,8 +151,14 @@ bool RayMarch(vec3 ori, vec3 dir, out vec3 hitPos) {
 void main() {
   float s = InitRand(gl_FragCoord.xy);
 
-  vec3 L = vec3(0.0);
-  L = GetGBufferDiffuse(GetScreenCoordinate(vPosWorld.xyz));
-  vec3 color = pow(clamp(L, vec3(0.0), vec3(1.0)), vec3(1.0 / 2.2));
-  gl_FragColor = vec4(vec3(color.rgb), 1.0);
+  vec3 wi = normalize(uLightDir);
+  vec3 wo = normalize(uCameraPos - vPosWorld.xyz);
+  vec2 uv = GetScreenCoordinate(vPosWorld.xyz);
+
+  // follow the rendering equation for diffuse BRDF
+  vec3 lightDirect = EvalDiffuse(wi, wo, uv) * EvalDirectionalLight(uv);
+
+  vec3 light = lightDirect;
+  vec3 color = pow(clamp(light, vec3(0.0), vec3(1.0)), vec3(1.0 / 2.2));
+  gl_FragColor = vec4(color, 1.0);
 }
