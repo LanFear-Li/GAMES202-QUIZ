@@ -19,6 +19,10 @@ varying highp vec4 vPosWorld;
 #define INV_PI 0.31830988618
 #define INV_TWO_PI 0.15915494309
 
+#define SAMPLE_NUM 2
+#define MARCH_TIMES 20
+#define MARCH_STEP 0.2
+
 float Rand1(inout float p) {
   p = fract(p * .1031);
   p *= p + 33.33;
@@ -143,10 +147,26 @@ vec3 EvalDirectionalLight(vec2 uv) {
 }
 
 bool RayMarch(vec3 ori, vec3 dir, out vec3 hitPos) {
+  // Using fixed step for RayMarching
+  // TODO: Dynamic Step RayMarching with Min-Pooling Mipmap Optimization
+  vec3 curPos = ori;
+  for (int i = 0; i < MARCH_TIMES; i++) {
+    vec3 checkPos = curPos + dir * float(MARCH_STEP);
+
+    vec2 uv = GetScreenCoordinate(checkPos);
+    float bufferDepth = GetGBufferDepth(uv);
+    float checkDepth = GetDepth(checkPos);
+
+    if (checkDepth - bufferDepth > 1e-6) {
+      hitPos = checkPos;
+      return true;
+    }
+
+    curPos = checkPos;
+  }
+
   return false;
 }
-
-#define SAMPLE_NUM 1
 
 void main() {
   float s = InitRand(gl_FragCoord.xy);
@@ -154,11 +174,39 @@ void main() {
   vec3 wi = normalize(uLightDir);
   vec3 wo = normalize(uCameraPos - vPosWorld.xyz);
   vec2 uv = GetScreenCoordinate(vPosWorld.xyz);
+  vec3 normal = normalize(GetGBufferNormalWorld(uv));
 
-  // follow the rendering equation for diffuse BRDF
+  // Direct Illumination: follow the rendering equation for diffuse BRDF
   vec3 lightDirect = EvalDiffuse(wi, wo, uv) * EvalDirectionalLight(uv);
+  
+  // Indirect Illumination: Calculate the radiance of intersection with RayMarching 
+  vec3 lightIndirect = vec3(0.0);
+  vec3 intersection = vec3(0.0);
+  float pdf = 1.0;
 
-  vec3 light = lightDirect;
+  // Generate local coordinate system
+  vec3 b1, b2;
+  LocalBasis(normal, b1, b2);
+
+  // Accumulate indirect light
+  for (int i = 0; i < SAMPLE_NUM; i++) {
+    Rand1(s);
+
+    // Sample reflection ray direction under world coordinate system
+    vec3 rayDirection = SampleHemisphereUniform(s, pdf);
+    rayDirection = normalize(mat3(b1, b2, normal) * rayDirection);
+
+    // Calculate intersection and accumulate light radiance
+    if (RayMarch(vPosWorld.xyz, rayDirection, intersection)) {
+      vec2 uvIntersect = GetScreenCoordinate(intersection);
+      vec3 woReflect = normalize(vPosWorld.xyz - intersection);
+      lightIndirect += EvalDiffuse(rayDirection, wo, uv) / pdf * EvalDiffuse(wi, woReflect, uvIntersect) * EvalDirectionalLight(uvIntersect);
+    }
+  }
+  lightIndirect = lightIndirect / float(SAMPLE_NUM);
+
+  // Global Illumination = Direct + Indirect(One Bounce)
+  vec3 light = lightDirect + lightIndirect;
   vec3 color = pow(clamp(light, vec3(0.0), vec3(1.0)), vec3(1.0 / 2.2));
   gl_FragColor = vec4(color, 1.0);
 }
