@@ -79,11 +79,28 @@ Vec3f IntegrateBRDF(Vec3f V, float roughness, float NdotV) {
     float C = 0.0;
     const int sample_count = 1024;
     Vec3f N = Vec3f(0.0, 0.0, 1.0);
-    
+
     samplePoints sampleList = squareToCosineHemisphere(sample_count);
     for (int i = 0; i < sample_count; i++) {
-      // TODO: To calculate (fr * ni) / p_o here
-      
+        // Get sample data: in-light direction and PDF
+        Vec3f inLight = sampleList.directions[i];
+        float pdf = sampleList.PDFs[i];
+
+        // Fresnel Term
+        float F = 1.0f;
+
+        // Geometry Term: Also Shadowing-Masking Term
+        float G = GeometrySmith(roughness, dot(N, V), dot(N, inLight));
+
+        // Normal Distribution Term: Using half-vector(in-light + out-light)
+        Vec3f h = normalize(V + inLight);
+        float D = DistributionGGX(N, h, roughness);
+
+        // microfacet BRDF calculation
+        float microFacetBRDF = F * G * D / (4.0f * dot(N, V) * pdf);
+        A += microFacetBRDF;
+        B += microFacetBRDF;
+        C += microFacetBRDF;
     }
 
     return {A / sample_count, B / sample_count, C / sample_count};
@@ -96,6 +113,8 @@ int main() {
         for (int j = 0; j < resolution; j++) {
             float roughness = step * (static_cast<float>(i) + 0.5f);
             float NdotV = step * (static_cast<float>(j) + 0.5f);
+
+            // V: ViewPos, out-light direction
             Vec3f V = Vec3f(std::sqrt(1.f - NdotV * NdotV), 0.f, NdotV);
 
             Vec3f irr = IntegrateBRDF(V, roughness, NdotV);

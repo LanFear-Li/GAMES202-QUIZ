@@ -22,30 +22,50 @@ const float PI = 3.14159265359;
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
-   // TODO: To calculate GGX NDF here
+    // TODO: To calculate GGX NDF here
+    float a = roughness * roughness;
+    float aPow = a * a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotHPow = NdotH * NdotH;
+
+    float numerator = aPow;
+    float denominator = NdotHPow * (aPow - 1.0) + 1.0;
+    denominator = PI * denominator * denominator;
     
+    return numerator / denominator;
 }
 
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
-    // TODO: To calculate Schlick G1 here
+    // TODO: To calculate Smith G1 here
+    float a = roughness + 1.0;
+    float k = (a * a) / 8.0;
+
+    float numerator = NdotV;
+    float denominator = NdotV * (1.0 - k) + k;
     
-    return 1.0;
+    return numerator / denominator;
 }
 
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
     // TODO: To calculate Smith G here
+    float NdotL = max(dot(N, L), 0.0);
+    float NdotV = max(dot(N, V), 0.0);
+    float ggx_in = GeometrySchlickGGX(NdotL, roughness);
+    float ggx_out = GeometrySchlickGGX(NdotV, roughness);
 
-    return 1.0;
+    return ggx_in * ggx_out;
 }
 
 vec3 fresnelSchlick(vec3 F0, vec3 V, vec3 H)
 {
     // TODO: To calculate Schlick F here
-    return vec3(1.0);
-}
+    float term = 1.0 - max(dot(V, H), 0.0);
+    term = pow(term, 5.0);
 
+    return F0 + (1.0 - F0) * term;
+}
 
 //https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
 vec3 AverageFresnel(vec3 r, vec3 g)
@@ -68,10 +88,15 @@ vec3 MultiScatterBRDF(float NdotL, float NdotV)
   vec3 F_avg = AverageFresnel(albedo, edgetint);
   
   // TODO: To calculate fms and missing energy here
+  vec3 numerator = (1.0 - E_o) * (1.0 - E_i);
+  vec3 denominator = PI * (1.0 - E_avg);
+  vec3 F_ms = numerator / denominator;
 
+  numerator = F_avg * E_avg;
+  denominator = 1.0 - F_avg * (1.0 - E_avg);
+  vec3 F_add = numerator / denominator;
 
-  return vec3(1.0);
-  
+  return F_add * F_ms; 
 }
 
 void main(void) {

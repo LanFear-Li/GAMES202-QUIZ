@@ -56,7 +56,7 @@ function loadOBJ(renderer, path, name, objMaterial, transform, metallic=1.0, rou
 									material = buildEnvMapMaterial("./src/shaders/envMapShader/EnvMapVertex.glsl", "./src/shaders/envMapShader/EnvMapFragment.glsl");
 									break;
 								case 'KullaContyMaterial':
-									material = buildKullaContyMaterial(colorMap, metallic, roughness, brdflut, eavglut, renderer.lights[0].entity,"./src/shaders/kullaContyShader/KullaContyVertex.glsl", "./src/shaders/kullaContyShader/KullaContyFragment.glsl");
+									material = buildKullaContyMaterial(colorMap, metallic, roughness, brdflut, eavglut, renderer.lights[0].entity,"./src/shaders/KCShader/KullaContyVertex.glsl", "./src/shaders/KCShader/KullaContyFragment.glsl");
 									break;
 								case 'PBRMaterial':
 									material = buildPBRMaterial(colorMap, metallic, roughness, brdflut, renderer.lights[0].entity,"./src/shaders/pbrShader/PBRVertex.glsl", "./src/shaders/pbrShader/PBRFragment.glsl");

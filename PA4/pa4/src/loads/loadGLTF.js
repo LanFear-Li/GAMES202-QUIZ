@@ -43,7 +43,7 @@ function loadGLTF(renderer, path, name, objMaterial, transform, metallic=1.0, ro
 					let material;
 					switch (objMaterial) {
 						case 'KullaContyMaterial':
-							material = buildKullaContyMaterial(colorMap, metallic, roughness, brdflut, eavglut,renderer.lights[0].entity,"./src/shaders/kullaContyShader/KullaContyVertex.glsl", "./src/shaders/kullaContyShader/KullaContyFragment.glsl");
+							material = buildKullaContyMaterial(colorMap, metallic, roughness, brdflut, eavglut,renderer.lights[0].entity,"./src/shaders/KCShader/KullaContyVertex.glsl", "./src/shaders/KCShader/KullaContyFragment.glsl");
 							break;
 						case 'PBRMaterial':
 							material = buildPBRMaterial(colorMap, metallic, roughness, brdflut, renderer.lights[0].entity,"./src/shaders/pbrShader/PBRVertex.glsl", "./src/shaders/pbrShader/PBRFragment.glsl");

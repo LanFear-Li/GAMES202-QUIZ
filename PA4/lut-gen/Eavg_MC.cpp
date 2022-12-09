@@ -78,13 +78,12 @@ Vec3f IntegrateEmu(Vec3f V, float roughness, float NdotV, Vec3f Ei) {
         float VoH = std::max(dot(V, H), 0.0f);
         float NoV = std::max(dot(N, V), 0.0f);
 
-        // TODO: To calculate Eavg here
-        
+        // F(x) = E(mu) * mu, mu = sin(theta) = L.z
+        Eavg += Ei * NoL;
     }
 
-    return Eavg / sample_count;
+    return Eavg * 2.0f / sample_count;
 }
-
 
 int main() {
     unsigned char *Edata = stbi_load("./GGX_E_MC_LUT.png", &resolution, &resolution, &channel, 3);
