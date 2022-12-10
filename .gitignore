@@ -1,6 +1,7 @@
 build
 .idea
 cmake-build-debug
+examples
 
 # Created by https://www.toptal.com/developers/gitignore/api/cmake
 # Edit at https://www.toptal.com/developers/gitignore?templates=cmake
